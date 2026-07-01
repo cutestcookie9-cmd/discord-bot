@@ -31,5 +31,5 @@ async def online(ctx):
     online_players = get_online()
     await ctx.send(f"🟢 Players Online: **{online_players}**")
 
-
+print("TOKEN:", TOKEN)
 bot.run(TOKEN)
