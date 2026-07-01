@@ -1,35 +1,44 @@
 import os
 import requests
 import discord
-from discord.ext import commands
+from discord import app_commands
 
 TOKEN = os.getenv("DISCORD_TOKEN")
-API_URL = "https://YOUR-RAILWAY-URL/status"
+API_URL = "https://player-api-production.up.railway.app/status"
 
-intents = discord.Intents.default()
+class Client(discord.Client):
+    def __init__(self):
+        intents = discord.Intents.default()
+        super().__init__(intents=intents)
+        self.tree = app_commands.CommandTree(self)
 
-bot = commands.Bot(command_prefix="!", intents=intents)
+    async def setup_hook(self):
+        await self.tree.sync()
+        print("Slash commands synced!")
 
+client = Client()
 
-def get_online():
+@client.event
+async def on_ready():
+    print(f"Logged in as {client.user}")
+
+@client.tree.command(name="status", description="Shows the current player count")
+async def status(interaction: discord.Interaction):
     try:
         response = requests.get(API_URL, timeout=5)
         response.raise_for_status()
         data = response.json()
-        return data.get("online", "Unknown")
-    except Exception:
-        return "Offline"
 
+        online = data.get("online", 0)
 
-@bot.event
-async def on_ready():
-    print(f"Logged in as {bot.user}")
+        await interaction.response.send_message(
+            f"🟢 **Players Online:** {online}"
+        )
 
+    except Exception as e:
+        await interaction.response.send_message(
+            f"❌ Couldn't contact the player API.\n```{e}```",
+            ephemeral=True
+        )
 
-@bot.command()
-async def online(ctx):
-    online_players = get_online()
-    await ctx.send(f"🟢 Players Online: **{online_players}**")
-
-print("TOKEN:", TOKEN)
-bot.run(TOKEN)
+client.run(TOKEN)
